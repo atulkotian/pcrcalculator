@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCR Supermix Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #161d2a;
+    --border: #1e2d42;
+    --accent: #00c8ff;
+    --accent2: #00ff9f;
+    --accent3: #ff6b35;
+    --purple: #b47fff;
+    --text: #d0e4f7;
+    --text-dim: #5a7a9a;
+    --text-muted: #2d4a66;
+    --red: #ff4466;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(0,200,255,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,255,159,0.03) 0%, transparent 50%);
+  }
+
+  header {
+    border-bottom: 1px solid var(--border); padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(17,22,32,0.8); backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo-icon {
+    width: 38px; height: 38px; border: 1.5px solid var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: -0.5px;
+  }
+  .logo-text { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--text); letter-spacing: 0.5px; }
+  .logo-sub  { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .header-badge {
+    margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--accent2);
+    background: rgba(0,255,159,0.08); border: 1px solid rgba(0,255,159,0.2);
+    padding: 4px 10px; border-radius: 20px; letter-spacing: 1px;
+  }
+
+  .main { max-width: 1140px; margin: 0 auto; padding: 32px 24px; }
+
+  /* TABS */
+  .tab-bar {
+    display: flex; gap: 4px; margin-bottom: 28px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 16px; border: none; border-radius: 7px;
+    background: transparent; color: var(--text-dim);
+    font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.5px;
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  }
+  .tab-btn.active { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .tab-btn.active.pcr  { color: var(--accent);  border-color: rgba(0,200,255,0.3); }
+  .tab-btn.active.qpcr { color: var(--accent2); border-color: rgba(0,255,159,0.3); }
+  .tab-btn.active.plate{ color: var(--accent3); border-color: rgba(255,107,53,0.3); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ddPCR BANNER */
+  .ddpcr-banner {
+    display: flex; align-items: center; gap: 14px;
+    background: linear-gradient(135deg, rgba(180,127,255,0.08), rgba(180,127,255,0.04));
+    border: 1px solid rgba(180,127,255,0.28);
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+  }
+  .ddpcr-banner-icon {
+    font-size: 20px; flex-shrink: 0; line-height: 1;
+  }
+  .ddpcr-banner-text {
+    font-family: var(--mono); font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .ddpcr-banner-text strong { color: var(--purple); font-weight: 600; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .card-title {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--text-dim); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before { content: ''; display: inline-block; width: 3px; height: 12px; border-radius: 2px; }
+  .card-title.blue::before   { background: var(--accent); }
+  .card-title.green::before  { background: var(--accent2); }
+  .card-title.orange::before { background: var(--accent3); }
+
+  /* GRID */
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+
+  /* FIELDS */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); }
+  .field-hint { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+  input[type="number"], select {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: var(--mono); font-size: 14px;
+    padding: 9px 12px; width: 100%; outline: none; transition: border-color 0.2s; -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"]:focus, select:focus { border-color: var(--accent); background: rgba(0,200,255,0.04); }
+  select option { background: var(--surface2); }
+  input[type="text"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); font-family: var(--mono); font-size: 12px; padding: 5px 8px; outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  .checkbox-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; transition: border-color 0.2s;
+  }
+  .checkbox-row:hover { border-color: var(--text-muted); }
+  .checkbox-row.checked { border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.04); }
+  .checkbox-row input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+  .checkbox-row span { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+
+  /* NTC COUNT INLINE */
+  .ntc-count-wrap {
+    display: none; align-items: center; gap: 8px; padding: 9px 12px;
+    background: rgba(255,107,53,0.04); border: 1px solid rgba(255,107,53,0.3); border-radius: 6px;
+  }
+  .ntc-count-wrap.show { display: flex; }
+  .ntc-count-wrap span { font-family: var(--mono); font-size: 12px; color: var(--accent3); white-space: nowrap; }
+  .ntc-count-wrap input { width: 72px; flex-shrink: 0; }
+
+  /* REAGENT TABLE */
+  .reagent-table { width: 100%; border-collapse: collapse; }
+  .reagent-table th {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .reagent-table td { padding: 6px 12px; border-bottom: 1px solid rgba(30,45,66,0.5); font-family: var(--mono); font-size: 13px; }
+  .reagent-table tr:last-child td { border-bottom: none; }
+  .reagent-table td input[type="number"] { padding: 5px 8px; font-size: 13px; }
+
+  .del-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-muted);
+    cursor: pointer; width: 26px; height: 26px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s;
+  }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+  .add-btn {
+    background: none; border: 1px dashed var(--border); color: var(--text-dim);
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; margin-top: 10px;
+  }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* RESULTS — wider, clearly spaced columns */
+  .result-panel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .result-header {
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .result-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); }
+  .total-vol    { font-family: var(--mono); font-size: 12px; color: var(--accent2); }
+
+  /* 4-column layout: name(flex) | 1x | nx | conc */
+  .result-row {
+    display: grid;
+    grid-template-columns: 1fr 90px 110px 120px;
+    gap: 0;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(30,45,66,0.4);
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-row:hover { background: rgba(255,255,255,0.02); }
+
+  .rr-name  { font-family: var(--sans); font-size: 13px; color: var(--text); }
+  .rr-sub   { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .rr-col   { font-family: var(--mono); font-size: 13px; text-align: right; padding-left: 8px; }
+  .rr-col.dim    { color: var(--text-dim); }
+  .rr-col.blue   { color: var(--accent); }
+  .rr-col.green  { color: var(--accent2); }
+  .rr-col.orange { color: var(--accent3); }
+  .rr-col.conc   { color: var(--text-muted); font-size: 11px; }
+
+  .col-hdr {
+    font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-muted); text-align: right; padding-left: 8px; line-height: 1.4;
+  }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-box  { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .stat-label{ font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-value{ font-family: var(--mono); font-size: 22px; font-weight: 500; line-height: 1; }
+  .stat-unit { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+  /* FOOTNOTES */
+  .footnote {
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+    line-height: 1.6; margin-top: 10px; padding: 10px 14px;
+    border-left: 2px solid var(--border); background: rgba(255,255,255,0.01);
+    border-radius: 0 6px 6px 0;
+  }
+  .footnote .dispense-vol { color: var(--accent2); font-weight: 600; }
+  .footnote .ntc-note { color: var(--accent3); }
+
+  /* PLATE */
+  .plate-grid { display: grid; grid-template-columns: 20px repeat(12,1fr); gap: 3px; margin-bottom: 16px; }
+  .plate-label{ font-family: var(--mono); font-size: 10px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+
+  .well {
+    aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 8px; color: var(--text-muted); transition: all 0.15s;
+  }
+  .well.sample    { background: rgba(0,200,255,0.15);  border-color: rgba(0,200,255,0.45);  color: var(--accent); }
+  .well.duplicate { background: rgba(0,255,159,0.12);  border-color: rgba(0,255,159,0.35);  color: var(--accent2); }
+  .well.ntc       { background: rgba(255,107,53,0.15); border-color: rgba(255,107,53,0.45); color: var(--accent3); }
+  .well.filler    { background: rgba(180,127,255,0.12);border-color: rgba(180,127,255,0.38);color: var(--purple); }
+  .well.empty     { background: var(--surface); }
+
+  .legend       { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .legend-item  { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .legend-dot   { width: 12px; height: 12px; border-radius: 50%; border: 1px solid; flex-shrink: 0; }
+
+  .plate-ctrl-row{ display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+  .plate-ctrl-row .field { min-width: 120px; }
+
+  .plate-mode-btn {
+    padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-dim); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: all 0.15s;
+  }
+  .plate-mode-btn.active      { border-color: rgba(0,200,255,0.4); color: var(--accent); background: rgba(0,200,255,0.06); }
+  .plate-mode-btn.disabled-btn{ opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+  /* ALERTS */
+  .warning {
+    background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.2);
+    border-radius: 6px; padding: 10px 14px; font-family: var(--mono);
+    font-size: 11px; color: #ff8899; margin-top: 10px; display: none; line-height: 1.5;
+  }
+  .warning.show { display: block; }
+  .notice {
+    background: rgba(180,127,255,0.08); border: 1px solid rgba(180,127,255,0.25);
+    border-radius: 6px; padding: 10px 14px; font-family: var(--mono);
+    font-size: 11px; color: var(--purple); margin-top: 10px; display: none;
+  }
+  .notice.show { display: block; }
+
+  /* FILLER BOX */
+  .filler-box {
+    background: rgba(180,127,255,0.05); border: 1px solid rgba(180,127,255,0.2);
+    border-radius: 8px; padding: 18px 20px; margin-top: 20px;
+  }
+  .filler-box-title {
+    font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--purple); margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">PCR</div>
+  <div>
+    <div class="logo-text">Supermix Calculator</div>
+    <div class="logo-sub">Master mix · Scale up · Plate layout</div>
+  </div>
+  <div class="header-badge">v3.0</div>
+</header>
+
+<div class="main">
+  <div class="tab-bar">
+    <button class="tab-btn pcr active" onclick="switchTab('pcr')">⬡ Standard PCR</button>
+    <button class="tab-btn qpcr"       onclick="switchTab('qpcr')">◈ qPCR / Real-time</button>
+    <button class="tab-btn plate"      onclick="switchTab('plate')">⊞ 96-Well Plate</button>
+  </div>
+
+  <!-- ========== STANDARD PCR ========== -->
+  <div id="tab-pcr" class="tab-panel active">
+
+    <!-- ddPCR banner -->
+    <div class="ddpcr-banner">
+      <div class="ddpcr-banner-icon">💧</div>
+      <div class="ddpcr-banner-text">
+        <strong>Running ddPCR?</strong> &nbsp;Use the <strong>⊞ 96-Well Plate</strong> tab and select
+        <strong>ddPCR (QX200/QX600)</strong> or <strong>ddPCR (QXONE)</strong> as the PCR type.
+        Those modes include filler well calculations and instrument-specific plate constraints.
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">Samples</div>
+        <div class="stat-value" id="s-samples" style="color:var(--accent)">8</div>
+        <div class="stat-unit">unique</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Reactions</div>
+        <div class="stat-value" id="s-totalrxn" style="color:var(--accent)">8</div>
+        <div class="stat-unit">incl. reps + NTC</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Reaction Vol</div>
+        <div class="stat-value" id="s-rxnvol" style="color:var(--accent)">25</div>
+        <div class="stat-unit">µL per rxn</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Master Mix Vol</div>
+        <div class="stat-value" id="s-totalvol" style="color:var(--accent2)">—</div>
+        <div class="stat-unit">µL excl. template</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title blue">Reaction Setup</div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Reaction Volume (µL)</label>
+          <input type="number" id="pcr-rxn-vol" value="25" min="1" max="200" oninput="calcPCR()">
+        </div>
+        <div class="field">
+          <label>Number of Samples</label>
+          <input type="number" id="pcr-n-samples" value="8" min="1" max="384" oninput="calcPCR()">
+        </div>
+        <div class="field">
+          <label>Overage Factor (%)</label>
+          <input type="number" id="pcr-overage" value="10" min="0" max="50" oninput="calcPCR()">
+          <div class="field-hint">(25% recommended for ddPCR)</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;">
+        <label class="checkbox-row" id="pcr-ntc-box">
+          <input type="checkbox" id="pcr-ntc" onchange="toggleNTCCount('pcr');calcPCR()">
+          <span>Include NTC</span>
+        </label>
+        <div class="ntc-count-wrap" id="pcr-ntc-count-wrap">
+          <span>NTC wells:</span>
+          <input type="number" id="pcr-ntc-count" value="1" min="1" max="24" oninput="calcPCR()">
+        </div>
+        <label class="checkbox-row" id="pcr-dup-box">
+          <input type="checkbox" id="pcr-dup" onchange="syncReps('pcr','dup')">
+          <span>Duplicates</span>
+        </label>
+        <label class="checkbox-row" id="pcr-trip-box">
+          <input type="checkbox" id="pcr-trip" onchange="syncReps('pcr','trip')">
+          <span>Triplicates</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title blue">Reagent Components</div>
+      <table class="reagent-table">
+        <thead>
+          <tr>
+            <th style="width:36%">Reagent</th>
+            <th>Stock Conc.</th>
+            <th>Final Conc. / Vol</th>
+            <th>Unit</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pcr-reagent-body"></tbody>
+      </table>
+      <button class="add-btn" onclick="addReagent('pcr')">+ Add Reagent</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title blue">Master Mix Recipe</div>
+      <div class="result-panel">
+        <div class="result-header">
+          <div class="result-title">Mastermix only — template added separately per well</div>
+          <div class="total-vol" id="pcr-header-vol">—</div>
+        </div>
+        <!-- Column headers -->
+        <div class="result-row" style="padding:7px 20px; border-bottom: 1px solid var(--border);">
+          <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Reagent</div>
+          <div class="col-hdr">1× (µL)</div>
+          <div class="col-hdr" id="pcr-nx-header">n× +ovg (µL)</div>
+          <div class="col-hdr">Final Conc. (nM)</div>
+        </div>
+        <div id="pcr-results"></div>
+      </div>
+      <div id="pcr-footnote" class="footnote" style="display:none;"></div>
+      <div class="warning" id="pcr-vol-warn">⚠ Total per-reaction volume exceeds reaction volume. Check concentrations.</div>
+    </div>
+  </div>
+
+  <!-- ========== qPCR ========== -->
+  <div id="tab-qpcr" class="tab-panel">
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">Samples</div>
+        <div class="stat-value" id="q-samples" style="color:var(--accent2)">8</div>
+        <div class="stat-unit">unique</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Total Reactions</div>
+        <div class="stat-value" id="q-totalrxn" style="color:var(--accent2)">8</div>
+        <div class="stat-unit">incl. reps + NTC</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Reaction Vol</div>
+        <div class="stat-value" id="q-rxnvol" style="color:var(--accent2)">20</div>
+        <div class="stat-unit">µL per rxn</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Master Mix Vol</div>
+        <div class="stat-value" id="q-totalvol" style="color:var(--accent2)">—</div>
+        <div class="stat-unit">µL excl. template</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title green">Reaction Setup</div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Reaction Volume (µL)</label>
+          <input type="number" id="qpcr-rxn-vol" value="20" min="1" max="200" oninput="calcQPCR()">
+        </div>
+        <div class="field">
+          <label>Number of Samples</label>
+          <input type="number" id="qpcr-n-samples" value="8" min="1" max="384" oninput="calcQPCR()">
+        </div>
+        <div class="field">
+          <label>Overage Factor (%)</label>
+          <input type="number" id="qpcr-overage" value="10" min="0" max="50" oninput="calcQPCR()">
+          <div class="field-hint">(25% recommended for ddPCR)</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;">
+        <label class="checkbox-row" id="qpcr-ntc-box">
+          <input type="checkbox" id="qpcr-ntc" onchange="toggleNTCCount('qpcr');calcQPCR()">
+          <span>Include NTC</span>
+        </label>
+        <div class="ntc-count-wrap" id="qpcr-ntc-count-wrap">
+          <span>NTC wells:</span>
+          <input type="number" id="qpcr-ntc-count" value="1" min="1" max="24" oninput="calcQPCR()">
+        </div>
+        <label class="checkbox-row" id="qpcr-dup-box">
+          <input type="checkbox" id="qpcr-dup" onchange="syncReps('qpcr','dup')">
+          <span>Duplicates</span>
+        </label>
+        <label class="checkbox-row" id="qpcr-trip-box">
+          <input type="checkbox" id="qpcr-trip" onchange="syncReps('qpcr','trip')">
+          <span>Triplicates</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title green">Reagent Components</div>
+      <table class="reagent-table">
+        <thead>
+          <tr>
+            <th style="width:36%">Reagent</th>
+            <th>Stock Conc.</th>
+            <th>Final Conc. / Vol</th>
+            <th>Unit</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="qpcr-reagent-body"></tbody>
+      </table>
+      <button class="add-btn" onclick="addReagent('qpcr')">+ Add Reagent</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title green">Master Mix Recipe</div>
+      <div class="result-panel">
+        <div class="result-header">
+          <div class="result-title">Mastermix only — template added separately per well</div>
+          <div class="total-vol" id="qpcr-header-vol" style="color:var(--accent2)">—</div>
+        </div>
+        <div class="result-row" style="padding:7px 20px; border-bottom: 1px solid var(--border);">
+          <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Reagent</div>
+          <div class="col-hdr">1× (µL)</div>
+          <div class="col-hdr" id="qpcr-nx-header">n× +ovg (µL)</div>
+          <div class="col-hdr">Final Conc. (nM)</div>
+        </div>
+        <div id="qpcr-results"></div>
+      </div>
+      <div id="qpcr-footnote" class="footnote" style="display:none;"></div>
+      <div class="warning" id="qpcr-vol-warn">⚠ Total per-reaction volume exceeds reaction volume. Check concentrations.</div>
+    </div>
+  </div>
+
+  <!-- ========== PLATE ========== -->
+  <div id="tab-plate" class="tab-panel">
+    <div class="card">
+      <div class="card-title orange">96-Well Plate Layout</div>
+      <div class="plate-ctrl-row">
+        <div class="field">
+          <label>PCR Type</label>
+          <select id="plate-type" onchange="onPlateTypeChange()">
+            <option value="pcr">Standard PCR</option>
+            <option value="qpcr">qPCR</option>
+            <option value="ddpcr_qx">ddPCR (QX200/QX600)</option>
+            <option value="ddpcr_qxone">ddPCR (QXONE)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Samples</label>
+          <input type="number" id="plate-samples" value="8" min="1" max="94" oninput="renderPlate()">
+        </div>
+        <div class="field">
+          <label>Replicates per sample</label>
+          <select id="plate-reps" onchange="renderPlate()">
+            <option value="1">Singlet</option>
+            <option value="2">Duplicate</option>
+            <option value="3">Triplicate</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>NTC Wells</label>
+          <input type="number" id="plate-ntc" value="1" min="0" max="24" oninput="renderPlate()">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="opacity:0">.</label>
+          <div style="display:flex;gap:6px;">
+            <button class="plate-mode-btn active" id="btn-by-col" onclick="setPlateDir('col')">Fill by Column</button>
+            <button class="plate-mode-btn" id="btn-by-row" onclick="setPlateDir('row')">Fill by Row</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="notice" id="ddpcr-row-notice">⊘ Row-fill is disabled for ddPCR — plates must be filled by column for cartridge loading.</div>
+      <div class="warning" id="qxone-odd-warn"></div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,200,255,0.15);border-color:rgba(0,200,255,0.45);"></div><span>Sample</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,255,159,0.12);border-color:rgba(0,255,159,0.35);"></div><span>Replicate</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(255,107,53,0.15);border-color:rgba(255,107,53,0.45);"></div><span>NTC</span></div>
+        <div class="legend-item" id="legend-filler" style="display:none;"><div class="legend-dot" style="background:rgba(180,127,255,0.12);border-color:rgba(180,127,255,0.38);"></div><span>Filler (Supermix + H₂O 1:1)</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--surface);border-color:var(--border);"></div><span>Empty</span></div>
+      </div>
+
+      <div class="plate-grid" id="plate-grid"></div>
+      <div id="plate-summary"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title orange">Calculated Volumes for This Plate</div>
+      <div id="plate-mix-results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  DEFAULT REAGENTS
+//  isTemplate flag = excluded from mastermix vol, shown in footnote
+// ============================================================
+const DEFAULT_PCR = [
+  { name: '2× PCR Master Mix',   stock: 2,     final: 1,   unit: 'x'  },
+  { name: 'Forward Primer',       stock: 10000, final: 500, unit: 'nM' },
+  { name: 'Reverse Primer',       stock: 10000, final: 500, unit: 'nM' },
+  { name: 'DNA Template',         stock: null,  final: null, unit: 'µL', vol: 2, isTemplate: true },
+  { name: 'Nuclease-Free Water',  stock: null,  final: null, unit: 'µL', isWater: true },
+];
+const DEFAULT_QPCR = [
+  { name: '2× SYBR/qPCR Mix',    stock: 2,     final: 1,   unit: 'x'  },
+  { name: 'Forward Primer',       stock: 10000, final: 400, unit: 'nM' },
+  { name: 'Reverse Primer',       stock: 10000, final: 400, unit: 'nM' },
+  { name: 'Probe (optional)',      stock: 5000,  final: 200, unit: 'nM' },
+  { name: 'cDNA / Template',      stock: null,  final: null, unit: 'µL', vol: 2, isTemplate: true },
+  { name: 'Nuclease-Free Water',  stock: null,  final: null, unit: 'µL', isWater: true },
+];
+
+let pcrReagents  = [];
+let qpcrReagents = [];
+let plateDir = 'col';
+
+const clone = arr => arr.map(r => ({...r}));
+
+// ============================================================
+//  TABS
+// ============================================================
+function switchTab(t) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  document.querySelector('.tab-btn.'+t).classList.add('active');
+  if (t === 'plate') renderPlate();
+}
+
+// ============================================================
+//  NTC TOGGLE
+// ============================================================
+function toggleNTCCount(m) {
+  const on = document.getElementById(m+'-ntc').checked;
+  document.getElementById(m+'-ntc-count-wrap').classList.toggle('show', on);
+  document.getElementById(m+'-ntc-box').classList.toggle('checked', on);
+}
+
+// ============================================================
+//  REAGENT TABLE
+// ============================================================
+function addReagent(m) {
+  const arr = m==='pcr' ? pcrReagents : qpcrReagents;
+  arr.splice(arr.length-1, 0, { name:'New Reagent', stock:100, final:10, unit:'nM' });
+  renderReagentTable(m);
+}
+function deleteReagent(m, i) {
+  (m==='pcr' ? pcrReagents : qpcrReagents).splice(i,1);
+  renderReagentTable(m);
+}
+function updateReagent(m, i, k, v) {
+  (m==='pcr' ? pcrReagents : qpcrReagents)[i][k] = v;
+  m==='pcr' ? calcPCR() : calcQPCR();
+}
+
+function renderReagentTable(m) {
+  const arr   = m==='pcr' ? pcrReagents : qpcrReagents;
+  const tbody = document.getElementById(m+'-reagent-body');
+  tbody.innerHTML = '';
+  arr.forEach((r, i) => {
+    const iW  = r.isWater;
+    const iT  = r.isTemplate;
+    const iV  = r.unit==='µL' && !iW; // fixed µL (incl. template)
+    const tr  = document.createElement('tr');
+
+    // Name — template gets an amber tint to stand out
+    const nameColor = iW ? 'var(--text-muted)' : iT ? 'var(--accent3)' : 'var(--text)';
+    const nameReadonly = iW ? 'readonly' : '';
+    const nameInp = `<input type="text"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:5px;color:${nameColor};font-family:var(--mono);font-size:12px;padding:5px 8px;width:100%;"
+      value="${r.name}" ${nameReadonly}
+      oninput="updateReagent('${m}',${i},'name',this.value)">`;
+
+    // Stock — not applicable for water or fixed-vol reagents
+    const stockInp = (iW || iV)
+      ? `<span style="font-family:var(--mono);font-size:12px;color:var(--text-muted)">—</span>`
+      : `<input type="number" value="${r.stock||''}" min="0" oninput="updateReagent('${m}',${i},'stock',+this.value)">`;
+
+    // Final / vol
+    let finalInp;
+    if (iW)      finalInp = `<span style="font-family:var(--mono);font-size:12px;color:var(--accent)">to vol</span>`;
+    else if (iV) finalInp = `<input type="number" value="${r.vol||''}" min="0" step="0.1" oninput="updateReagent('${m}',${i},'vol',+this.value)">`;
+    else         finalInp = `<input type="number" value="${r.final||''}" min="0" oninput="updateReagent('${m}',${i},'final',+this.value)">`;
+
+    // Unit selector — all concentrations in nM preferred; water locked
+    const unitSel = `<select oninput="updateReagent('${m}',${i},'unit',this.value)" ${iW?'disabled style="opacity:.4"':''}>
+      ${['x','nM','µM','mM','µL'].map(u=>`<option ${r.unit===u?'selected':''}>${u}</option>`).join('')}
+    </select>`;
+
+    const delBtn = iW ? '' : `<button class="del-btn" onclick="deleteReagent('${m}',${i})">×</button>`;
+
+    // Template badge
+    const tBadge = iT ? `<span style="font-family:var(--mono);font-size:9px;color:var(--accent3);margin-left:6px;opacity:.7;">added per well</span>` : '';
+
+    tr.innerHTML = `<td>${nameInp}${tBadge}</td><td>${stockInp}</td><td>${finalInp}</td><td>${unitSel}</td><td>${delBtn}</td>`;
+    tbody.appendChild(tr);
+  });
+  m==='pcr' ? calcPCR() : calcQPCR();
+}
+
+// ============================================================
+//  VOLUME PER REACTION
+// ============================================================
+function volPer(r, rxnVol) {
+  if (r.isWater)             return null;
+  if (r.unit==='µL')         return r.vol || 0;
+  if (r.unit==='x')          return rxnVol * (r.final / r.stock);
+  if (!r.stock || !r.final)  return 0;
+  // Concentration → volume: C1V1=C2V2, normalise everything to nM
+  let stockNM = r.stock, finalNM = r.final;
+  if (r.unit==='µM') { stockNM *= 1000; finalNM *= 1000; }
+  if (r.unit==='mM') { stockNM *= 1e6;  finalNM *= 1e6; }
+  return (finalNM / stockNM) * rxnVol;
+}
+
+// Format final concentration for display — always in nM where applicable
+function fmtConc(r) {
+  if (r.isWater)                      return '—';
+  if (r.unit==='µL' || r.isTemplate)  return `${r.vol||'?'} µL`;
+  if (r.unit==='x')                   return `${r.final}×`;
+  // Convert to nM
+  let nM = r.final;
+  if (r.unit==='µM') nM = r.final * 1000;
+  if (r.unit==='mM') nM = r.final * 1e6;
+  if (nM >= 1000) return `${(nM/1000).toFixed(2)} µM`;
+  return `${nM} nM`;
+}
+
+// ============================================================
+//  CALC CORE
+// ============================================================
+function calcMix(m) {
+  const isQ  = m==='qpcr';
+  const p    = isQ ? 'qpcr' : 'pcr';
+  const rxnVol   = +document.getElementById(p+'-rxn-vol').value   || (isQ?20:25);
+  const nSamp    = +document.getElementById(p+'-n-samples').value  || 1;
+  const overage  = (+document.getElementById(p+'-overage').value   || 0)/100;
+  const ntcOn    =  document.getElementById(p+'-ntc').checked;
+  const ntcCount = ntcOn ? (+document.getElementById(p+'-ntc-count').value||1) : 0;
+  const dup      =  document.getElementById(p+'-dup').checked;
+  const trip     =  document.getElementById(p+'-trip').checked;
+  const reps     = trip ? 3 : dup ? 2 : 1;
+  const totalRxn = nSamp * reps + ntcCount;
+  // Scale excludes template — template added per well individually
+  const scale    = totalRxn * (1 + overage);
+
+  const arr = isQ ? qpcrReagents : pcrReagents;
+
+  // Separate template rows from mix rows
+  const templateRows = arr.filter(r => r.isTemplate);
+  const templateVol  = templateRows.reduce((s,r) => s + (r.vol||0), 0);
+
+  let sumMix = 0; // sum of non-template, non-water volumes
+  let rows = arr.map(r => {
+    if (r.isWater || r.isTemplate) return {...r, vol1x: null}; // will fill water later
+    const v = volPer(r, rxnVol);
+    sumMix += v;
+    return {...r, vol1x: v};
+  });
+
+  // Water fills up to (rxnVol - templateVol) — i.e. the dispensable volume per well
+  const dispenseVol = rxnVol - templateVol;
+  const waterRow = rows.find(r => r.isWater);
+  if (waterRow) waterRow.vol1x = Math.max(0, dispenseVol - sumMix);
+
+  // Put template rows back with their fixed vol (for display)
+  rows = rows.map(r => {
+    if (r.isTemplate) return {...r, vol1x: r.vol||0};
+    return r;
+  });
+
+  document.getElementById(p+'-vol-warn').classList.toggle('show',
+    !waterRow && Math.abs(sumMix - dispenseVol) > 0.01);
+
+  return { rows, totalRxn, scale, rxnVol, nSamp, ntcCount, reps, overage, templateVol, dispenseVol, templateRows };
+}
+
+// ============================================================
+//  RENDER RESULTS
+// ============================================================
+function renderResults(m, d) {
+  const isQ  = m==='qpcr';
+  const p    = isQ ? 'qpcr' : 'pcr';
+  const col  = isQ ? 'green' : 'blue';
+  const { rows, totalRxn, scale, rxnVol, nSamp, ntcCount, overage, templateVol, dispenseVol, templateRows } = d;
+
+  // Mastermix vol = dispenseVol × scale (excl. template)
+  const mmVol = dispenseVol * scale;
+
+  // Stat boxes
+  if (!isQ) {
+    document.getElementById('s-samples').textContent  = nSamp;
+    document.getElementById('s-totalrxn').textContent = totalRxn;
+    document.getElementById('s-rxnvol').textContent   = rxnVol;
+    document.getElementById('s-totalvol').textContent = mmVol.toFixed(1);
+  } else {
+    document.getElementById('q-samples').textContent  = nSamp;
+    document.getElementById('q-totalrxn').textContent = totalRxn;
+    document.getElementById('q-rxnvol').textContent   = rxnVol;
+    document.getElementById('q-totalvol').textContent = mmVol.toFixed(1);
+  }
+
+  document.getElementById(p+'-nx-header').textContent =
+    `${totalRxn}× +${(overage*100).toFixed(0)}% ovg (µL)`;
+  document.getElementById(p+'-header-vol').textContent =
+    `Dispense ${dispenseVol.toFixed(1)} µL/well → ${mmVol.toFixed(1)} µL total`;
+
+  const cont = document.getElementById(p+'-results');
+  cont.innerHTML = '';
+
+  // Sort: non-template first, then template, then water
+  const ordered = [
+    ...rows.filter(r => !r.isTemplate && !r.isWater),
+    ...rows.filter(r => r.isTemplate),
+    ...rows.filter(r => r.isWater),
+  ];
+
+  ordered.forEach(r => {
+    const concStr = fmtConc(r);
+    const isT = r.isTemplate;
+    const div = document.createElement('div');
+    div.className = 'result-row';
+    if (isT) div.style.background = 'rgba(255,107,53,0.03)';
+
+    // For template: show vol but mark as "add per well", scale col shows "add to each rxn"
+    let vol1xStr, volNxStr;
+    if (r.isWater) {
+      vol1xStr = r.vol1x !== null ? r.vol1x.toFixed(2) : '—';
+      volNxStr = r.vol1x !== null ? (r.vol1x * scale).toFixed(2) : '—';
+    } else if (isT) {
+      vol1xStr = (r.vol||0).toFixed(2);
+      volNxStr = '× each rxn';
+    } else {
+      vol1xStr = r.vol1x !== null ? r.vol1x.toFixed(2) : '—';
+      volNxStr = r.vol1x !== null ? (r.vol1x * scale).toFixed(2) : '—';
+    }
+
+    div.innerHTML = `
+      <div>
+        <div class="rr-name">${r.name}${isT ? ' <span style="font-size:10px;color:var(--accent3);font-family:var(--mono);">(added per well)</span>' : ''}</div>
+        <div class="rr-sub">${r.isWater ? 'fill to dispensing volume' : r.unit==='x' ? `${r.stock}× stock` : isT ? 'not included in mastermix' : `stock: ${r.stock||'?'} ${r.unit==='nM'||r.unit==='µM'||r.unit==='mM' ? 'nM (normalised)' : r.unit}`}</div>
+      </div>
+      <div class="rr-col dim">${vol1xStr}</div>
+      <div class="rr-col ${isT ? '' : col}" style="${isT ? 'color:var(--accent3);font-size:11px;' : ''}">${volNxStr}</div>
+      <div class="rr-col conc">${concStr}</div>`;
+    cont.appendChild(div);
+  });
+
+  // Totals
+  const mixOnlyRows = rows.filter(r => !r.isTemplate);
+  const tot1x  = dispenseVol;
+  const totNx  = mmVol;
+
+  const totDiv = document.createElement('div');
+  totDiv.className = 'result-row';
+  totDiv.style.cssText = 'background:rgba(255,255,255,.025);border-top:1px solid var(--border);';
+  totDiv.innerHTML = `
+    <div><div class="rr-name" style="font-weight:600">TOTAL (mastermix)</div>
+    <div class="rr-sub">template dispensed separately per well</div></div>
+    <div class="rr-col dim" style="font-weight:600">${tot1x.toFixed(2)}</div>
+    <div class="rr-col ${col}" style="font-weight:600">${totNx.toFixed(2)}</div>
+    <div class="rr-col conc">—</div>`;
+  cont.appendChild(totDiv);
+
+  // ---- Footnote ----
+  const fnEl = document.getElementById(p+'-footnote');
+  const hasTemplate = templateRows.length > 0 && templateVol > 0;
+  const ntcOn = ntcCount > 0;
+
+  let fnLines = [];
+
+  if (hasTemplate) {
+    const tName = templateRows.map(r=>r.name).join(' + ');
+    fnLines.push(
+      `📌 <span class="dispense-vol">Dispensing volume per well: ${dispenseVol.toFixed(2)} µL</span> — ` +
+      `then add <strong>${templateVol.toFixed(2)} µL</strong> of ${tName} to each sample well ` +
+      `to reach the full ${rxnVol} µL reaction volume.`
+    );
+  }
+
+  if (ntcOn && hasTemplate) {
+    fnLines.push(
+      `<span class="ntc-note">🔬 NTC wells: Replace template with <strong>${templateVol.toFixed(2)} µL Nuclease-Free Water</strong> ` +
+      `to maintain the same total volume of ${rxnVol} µL per well.</span>`
+    );
+  }
+
+  if (fnLines.length > 0) {
+    fnEl.innerHTML = fnLines.join('<br><br>');
+    fnEl.style.display = 'block';
+  } else {
+    fnEl.style.display = 'none';
+  }
+}
+
+// ============================================================
+//  SYNC REPS
+// ============================================================
+function syncReps(m, changed) {
+  const dup  = document.getElementById(m+'-dup');
+  const trip = document.getElementById(m+'-trip');
+  if (changed==='dup'  && dup.checked)  trip.checked = false;
+  if (changed==='trip' && trip.checked) dup.checked  = false;
+  m==='pcr' ? calcPCR() : calcQPCR();
+}
+
+function calcPCR() {
+  renderResults('pcr', calcMix('pcr'));
+  ['pcr-ntc-box','pcr-dup-box','pcr-trip-box'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('checked', el.querySelector('input').checked);
+  });
+}
+function calcQPCR() {
+  renderResults('qpcr', calcMix('qpcr'));
+  ['qpcr-ntc-box','qpcr-dup-box','qpcr-trip-box'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('checked', el.querySelector('input').checked);
+  });
+}
+
+// ============================================================
+//  PLATE — direction + type
+// ============================================================
+function setPlateDir(dir) {
+  const type = document.getElementById('plate-type').value;
+  if ((type==='ddpcr_qx'||type==='ddpcr_qxone') && dir==='row') return;
+  plateDir = dir;
+  document.getElementById('btn-by-col').classList.toggle('active', dir==='col');
+  document.getElementById('btn-by-row').classList.toggle('active', dir==='row');
+  renderPlate();
+}
+
+function onPlateTypeChange() {
+  const type = document.getElementById('plate-type').value;
+  const isDDP = type==='ddpcr_qx' || type==='ddpcr_qxone';
+  const rowBtn = document.getElementById('btn-by-row');
+  if (isDDP) {
+    plateDir = 'col';
+    document.getElementById('btn-by-col').classList.add('active');
+    rowBtn.classList.remove('active');
+    rowBtn.classList.add('disabled-btn');
+    document.getElementById('ddpcr-row-notice').classList.add('show');
+    document.getElementById('legend-filler').style.display = 'flex';
+  } else {
+    rowBtn.classList.remove('disabled-btn');
+    document.getElementById('ddpcr-row-notice').classList.remove('show');
+    document.getElementById('legend-filler').style.display = 'none';
+    document.getElementById('qxone-odd-warn').classList.remove('show');
+  }
+  renderPlate();
+}
+
+// ============================================================
+//  PLATE — render
+// ============================================================
+function renderPlate() {
+  const nSamp   = parseInt(document.getElementById('plate-samples').value)||8;
+  const reps    = parseInt(document.getElementById('plate-reps').value)||1;
+  const ntcW    = parseInt(document.getElementById('plate-ntc').value)||0;
+  const type    = document.getElementById('plate-type').value;
+  const isDDP   = type==='ddpcr_qx'||type==='ddpcr_qxone';
+  const isQXONE = type==='ddpcr_qxone';
+  const ROWS=8, COLS=12;
+  const ROW_LABELS='ABCDEFGH'.split('');
+
+  const order = [];
+  if (plateDir==='col'||isDDP) {
+    for (let c=0;c<COLS;c++) for (let r=0;r<ROWS;r++) order.push(r*COLS+c);
+  } else {
+    for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) order.push(r*COLS+c);
+  }
+
+  const wells = Array(96).fill('empty');
+  let wi = 0;
+
+  for (let s=0;s<nSamp;s++)
+    for (let rep=0;rep<reps;rep++)
+      if (wi<96) { wells[order[wi]] = rep===0 ? 'sample' : 'duplicate'; wi++; }
+
+  for (let n=0;n<ntcW;n++)
+    if (wi<96) { wells[order[wi]] = 'ntc'; wi++; }
+
+  // ddPCR filler
+  let fillerCount = 0;
+  const warnEl = document.getElementById('qxone-odd-warn');
+  warnEl.classList.remove('show');
+
+  if (isDDP) {
+    const usedCols = Math.ceil(wi/ROWS);
+    let targetCols = usedCols;
+    if (isQXONE && usedCols % 2 !== 0) {
+      targetCols = usedCols+1;
+      warnEl.textContent = `⚠ QXONE requires an even number of columns. Your layout spans ${usedCols} column${usedCols>1?'s':''} — 1 extra filler column added to reach ${targetCols} columns.`;
+      warnEl.classList.add('show');
+    }
+    const targetWells = targetCols * ROWS;
+    for (let i=wi; i<targetWells && i<96; i++) { wells[order[i]] = 'filler'; fillerCount++; }
+  }
+
+  // Draw grid
+  const grid = document.getElementById('plate-grid');
+  grid.innerHTML = '';
+  grid.appendChild(document.createElement('div'));
+  for (let c=1;c<=COLS;c++) {
+    const l=document.createElement('div'); l.className='plate-label'; l.textContent=c; grid.appendChild(l);
+  }
+  for (let r=0;r<ROWS;r++) {
+    const rl=document.createElement('div'); rl.className='plate-label'; rl.textContent=ROW_LABELS[r]; grid.appendChild(rl);
+    for (let c=0;c<COLS;c++) {
+      const w=document.createElement('div'); w.className='well '+wells[r*COLS+c]; grid.appendChild(w);
+    }
+  }
+
+  const sCount = wells.filter(w=>w==='sample').length;
+  const rCount = wells.filter(w=>w==='duplicate').length;
+  const nCount = wells.filter(w=>w==='ntc').length;
+  const fCount = wells.filter(w=>w==='filler').length;
+  const uCount = wells.filter(w=>w!=='empty').length;
+  const active = sCount+rCount+nCount;
+
+  let sumHTML = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
+    <div class="stat-box" style="flex:1;min-width:90px;padding:10px 14px;">
+      <div class="stat-label">Used Wells</div>
+      <div class="stat-value" style="color:var(--accent3);font-size:18px;">${uCount}</div>
+      <div class="stat-unit">/ 96</div>
+    </div>
+    <div class="stat-box" style="flex:1;min-width:90px;padding:10px 14px;">
+      <div class="stat-label">Samples</div>
+      <div class="stat-value" style="color:var(--accent);font-size:18px;">${sCount}</div>
+      <div class="stat-unit">unique</div>
+    </div>
+    <div class="stat-box" style="flex:1;min-width:90px;padding:10px 14px;">
+      <div class="stat-label">Replicates</div>
+      <div class="stat-value" style="color:var(--accent2);font-size:18px;">${rCount}</div>
+      <div class="stat-unit">wells</div>
+    </div>
+    <div class="stat-box" style="flex:1;min-width:90px;padding:10px 14px;">
+      <div class="stat-label">NTC Wells</div>
+      <div class="stat-value" style="color:var(--accent3);font-size:18px;">${nCount}</div>
+      <div class="stat-unit">controls</div>
+    </div>`;
+  if (isDDP) {
+    sumHTML += `<div class="stat-box" style="flex:1;min-width:90px;padding:10px 14px;border-color:rgba(180,127,255,.3);">
+      <div class="stat-label">Filler Wells</div>
+      <div class="stat-value" style="color:var(--purple);font-size:18px;">${fCount}</div>
+      <div class="stat-unit">supermix+H₂O</div>
+    </div>`;
+  }
+  sumHTML += '</div>';
+  document.getElementById('plate-summary').innerHTML = sumHTML;
+
+  renderPlateMix(type, active, fCount);
+}
+
+// ============================================================
+//  PLATE — volumes
+// ============================================================
+function renderPlateMix(type, activeRxns, fillerCount) {
+  const isQ   = type==='qpcr';
+  const isDDP = type==='ddpcr_qx'||type==='ddpcr_qxone';
+  const src   = isQ ? 'qpcr' : 'pcr';
+  const arr   = isQ ? qpcrReagents : pcrReagents;
+  const rxnVol  = +document.getElementById(src+'-rxn-vol').value || (isQ?20:25);
+  const overage = (+document.getElementById(src+'-overage').value||0)/100;
+  const col     = isQ ? 'green' : 'orange';
+
+  // Calc template vol
+  const templateVol = arr.filter(r=>r.isTemplate).reduce((s,r)=>s+(r.vol||0), 0);
+  const dispenseVol = rxnVol - templateVol;
+  const scale = activeRxns * (1+overage);
+  const mmVol = dispenseVol * scale;
+
+  let sumMix=0;
+  let rows = arr.map(r => {
+    if (r.isWater || r.isTemplate) return {...r, vol1x:null};
+    const v=volPer(r,rxnVol); sumMix+=v;
+    return {...r,vol1x:v};
+  });
+  const wR=rows.find(r=>r.isWater);
+  if (wR) wR.vol1x=Math.max(0, dispenseVol-sumMix);
+  // Add template rows back for display
+  rows = rows.map(r => r.isTemplate ? {...r, vol1x:r.vol||0} : r);
+
+  const ordered = [
+    ...rows.filter(r=>!r.isTemplate&&!r.isWater),
+    ...rows.filter(r=>r.isTemplate),
+    ...rows.filter(r=>r.isWater),
+  ];
+
+  const rowsHTML = ordered.map(r => {
+    const fc = fmtConc(r);
+    const isT = r.isTemplate;
+    const vol1xStr = isT ? (r.vol||0).toFixed(2) : r.vol1x!==null ? r.vol1x.toFixed(2) : '—';
+    const volNxStr = isT ? '× each rxn' : r.vol1x!==null ? (r.vol1x*scale).toFixed(2) : '—';
+    return `<div class="result-row" style="${isT?'background:rgba(255,107,53,0.03)':''}">
+      <div>
+        <div class="rr-name">${r.name}${isT?' <span style="font-size:10px;color:var(--accent3);font-family:var(--mono);">(per well)</span>':''}</div>
+        <div class="rr-sub">${r.isWater?'fill to dispensing volume':isT?'not pooled in mastermix':fmtStock(r)}</div>
+      </div>
+      <div class="rr-col dim">${vol1xStr}</div>
+      <div class="rr-col ${isT?'':col}" style="${isT?'color:var(--accent3);font-size:11px;':''}">${volNxStr}</div>
+      <div class="rr-col conc">${fc}</div>
+    </div>`;
+  }).join('');
+
+  let html = `
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.7;">
+      ${activeRxns} reaction${activeRxns!==1?'s':''} × ${dispenseVol.toFixed(1)} µL/well + ${(overage*100).toFixed(0)}% overage
+      = <span style="color:var(--accent3);font-weight:600">${mmVol.toFixed(1)} µL mastermix</span>
+      ${templateVol>0 ? `<br><span style="color:var(--accent3)">+ ${templateVol.toFixed(1)} µL template added individually per well</span>` : ''}
+    </div>
+    <div class="result-panel">
+      <div class="result-row" style="padding:7px 20px;border-bottom:1px solid var(--border);">
+        <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Reagent</div>
+        <div class="col-hdr">1× (µL)</div>
+        <div class="col-hdr">${activeRxns}× +ovg (µL)</div>
+        <div class="col-hdr">Final Conc.</div>
+      </div>
+      ${rowsHTML}
+      <div class="result-row" style="background:rgba(255,255,255,.025);border-top:1px solid var(--border)">
+        <div>
+          <div class="rr-name" style="font-weight:600">TOTAL (mastermix)</div>
+          <div class="rr-sub">dispensed ${dispenseVol.toFixed(1)} µL/well</div>
+        </div>
+        <div class="rr-col dim" style="font-weight:600">${dispenseVol.toFixed(2)}</div>
+        <div class="rr-col ${col}" style="font-weight:600">${mmVol.toFixed(2)}</div>
+        <div class="rr-col conc">—</div>
+      </div>
+    </div>`;
+
+  // Footnote for plate tab
+  if (templateVol > 0) {
+    html += `<div class="footnote" style="margin-top:12px;">
+      📌 <span class="dispense-vol">Dispense ${dispenseVol.toFixed(1)} µL mastermix per well</span>, then add
+      <strong>${templateVol.toFixed(1)} µL template</strong> to each sample well to reach ${rxnVol} µL total.
+      <br><br>
+      <span class="ntc-note">🔬 NTC wells: Add <strong>${templateVol.toFixed(1)} µL Nuclease-Free Water</strong> instead of template to maintain ${rxnVol} µL per well.</span>
+    </div>`;
+  }
+
+  // Filler block
+  if (isDDP && fillerCount > 0) {
+    const totalFiller = fillerCount * rxnVol * (1+overage);
+    const half = totalFiller/2;
+    const halfPer = rxnVol/2;
+    const label = type==='ddpcr_qxone' ? 'QXONE' : 'QX200/QX600';
+    html += `
+      <div class="filler-box">
+        <div class="filler-box-title">▪ Filler Well Mix — ${label}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;">
+          ${fillerCount} filler well${fillerCount!==1?'s':''} × ${rxnVol} µL + ${(overage*100).toFixed(0)}% overage
+          = <span style="color:var(--purple);font-weight:600">${totalFiller.toFixed(1)} µL total</span>
+          &nbsp;·&nbsp; 1:1 — 2× Supermix : Nuclease-Free Water
+        </div>
+        <div class="result-panel">
+          <div class="result-row" style="padding:7px 20px;border-bottom:1px solid var(--border);">
+            <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Component</div>
+            <div class="col-hdr">per well (µL)</div>
+            <div class="col-hdr">total (µL)</div>
+            <div class="col-hdr">ratio</div>
+          </div>
+          <div class="result-row">
+            <div><div class="rr-name">2× Supermix</div><div class="rr-sub">same supermix as reactions</div></div>
+            <div class="rr-col dim">${halfPer.toFixed(2)}</div>
+            <div class="rr-col" style="color:var(--purple);text-align:right">${half.toFixed(2)}</div>
+            <div class="rr-col conc">50%</div>
+          </div>
+          <div class="result-row">
+            <div><div class="rr-name">Nuclease-Free Water</div><div class="rr-sub">to complete volume</div></div>
+            <div class="rr-col dim">${halfPer.toFixed(2)}</div>
+            <div class="rr-col" style="color:var(--purple);text-align:right">${half.toFixed(2)}</div>
+            <div class="rr-col conc">50%</div>
+          </div>
+          <div class="result-row" style="background:rgba(255,255,255,.02);border-top:1px solid var(--border)">
+            <div><div class="rr-name" style="font-weight:600">TOTAL FILLER</div></div>
+            <div class="rr-col dim" style="font-weight:600">${rxnVol.toFixed(2)}</div>
+            <div class="rr-col" style="color:var(--purple);font-weight:600;text-align:right">${totalFiller.toFixed(2)}</div>
+            <div class="rr-col conc">—</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('plate-mix-results').innerHTML = html;
+}
+
+function fmtStock(r) {
+  if (!r.stock) return '';
+  let s = r.stock, u = r.unit;
+  if (u==='nM'||u==='µM'||u==='mM') {
+    // normalise to nM
+    let nM = r.stock;
+    if (u==='µM') nM *= 1000;
+    if (u==='mM') nM *= 1e6;
+    if (nM >= 1e6)  return `stock: ${(nM/1e6).toFixed(0)} mM`;
+    if (nM >= 1000) return `stock: ${(nM/1000).toFixed(0)} µM`;
+    return `stock: ${nM} nM`;
+  }
+  return `stock: ${s} ${u}`;
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+function init() {
+  pcrReagents  = clone(DEFAULT_PCR);
+  qpcrReagents = clone(DEFAULT_QPCR);
+  renderReagentTable('pcr');
+  renderReagentTable('qpcr');
+}
+
+init();
+</script>
+</body>
+</html>
